@@ -22,5 +22,4 @@ to userspace processes.
 
 + [interrupt_create](../syscalls/interrupt_create.md) - create an interrupt handle
 + [interrupt_wait](../syscalls/interrupt_wait.md) - wait for an interrupt on an interrupt handle
-+ [interrupt_complete](../syscalls/interrupt_complete.md) - clear and unmask an interrupt handle
 + [interrupt_signal](../syscalls/interrupt_signal.md) - unblocks a wait on an interrupt handle

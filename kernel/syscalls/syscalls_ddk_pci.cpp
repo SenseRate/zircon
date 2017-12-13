@@ -51,6 +51,10 @@ static inline void shutdown_early_init_console() {}
 #include <dev/pcie_root.h>
 #include <object/pci_device_dispatcher.h>
 
+// these are set only once in sys_pci_init so no mutex is needed to protect them
+static int32_t level_triggered_irqs[ZX_MAX_PCI_IRQS];
+static uint level_triggered_irq_count = 0;
+
 // Implementation of a PcieRoot with a look-up table based legacy IRQ swizzler
 // suitable for use with ACPI style swizzle definitions.
 class PcieRootLUTSwizzle : public PcieRoot {
@@ -170,12 +174,15 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
         return ZX_ERR_INVALID_ARGS;
     }
 
+    level_triggered_irq_count = 0;
+
     // Configure interrupts
     for (unsigned int i = 0; i < arg->num_irqs; ++i) {
         uint32_t irq = arg->irqs[i].global_irq;
         enum interrupt_trigger_mode tm = IRQ_TRIGGER_MODE_EDGE;
         if (arg->irqs[i].level_triggered) {
             tm = IRQ_TRIGGER_MODE_LEVEL;
+            level_triggered_irqs[level_triggered_irq_count++] = irq;
         }
         enum interrupt_polarity pol = IRQ_POLARITY_ACTIVE_LOW;
         if (arg->irqs[i].active_high) {
@@ -652,9 +659,18 @@ zx_status_t sys_pci_map_interrupt(zx_handle_t dev_handle,
     if (status != ZX_OK)
         return status;
 
+    bool level_triggered = false;
+    for (uint i = 0; i < level_triggered_irq_count; i++) {
+        if (level_triggered_irqs[i] == which_irq) {
+            level_triggered = true;
+            break;
+        }
+    }
+
     fbl::RefPtr<Dispatcher> interrupt_dispatcher;
     zx_rights_t rights;
-    zx_status_t result = pci_device->MapInterrupt(which_irq, &interrupt_dispatcher, &rights);
+    zx_status_t result = pci_device->MapInterrupt(which_irq, level_triggered, &interrupt_dispatcher,
+                                                  &rights);
     if (result != ZX_OK)
         return result;
 

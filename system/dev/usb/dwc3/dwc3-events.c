@@ -185,8 +185,7 @@ static int dwc3_irq_thread(void* arg) {
     volatile uint32_t* ring_cur = ring_start;
 
     while (1) {
-        zx_status_t status = zx_interrupt_wait(dwc->irq_handle);
-        zx_interrupt_complete(dwc->irq_handle);
+        zx_status_t status = zx_interrupt_wait(dwc->irq_handle, NULL);
         if (status != ZX_OK) {
             if (status != ZX_ERR_CANCELED) {
                 zxlogf(ERROR, "dwc3_irq_thread: zx_interrupt_wait returned %d\n", status);
@@ -237,6 +236,6 @@ void dwc3_events_start(dwc3_t* dwc) {
 }
 
 void dwc3_events_stop(dwc3_t* dwc) {
-    zx_interrupt_signal(dwc->irq_handle);
+    zx_interrupt_signal(dwc->irq_handle, ZX_INTERRUPT_CANCEL, 0);
     thrd_join(dwc->irq_thread, NULL);
 }

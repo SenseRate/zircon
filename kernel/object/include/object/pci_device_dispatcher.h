@@ -45,6 +45,7 @@ public:
     zx_status_t GetConfig(pci_config_info_t* out);
     zx_status_t ResetDevice();
     zx_status_t MapInterrupt(int32_t which_irq,
+                             bool level_triggered,
                              fbl::RefPtr<Dispatcher>* interrupt_dispatcher,
                              zx_rights_t* rights);
     zx_status_t QueryIrqModeCaps(zx_pci_irq_mode_t mode, uint32_t* out_max_irqs);

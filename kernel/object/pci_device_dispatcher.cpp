@@ -152,6 +152,7 @@ zx_status_t PciDeviceDispatcher::ResetDevice() {
 }
 
 zx_status_t PciDeviceDispatcher::MapInterrupt(int32_t which_irq,
+                                              bool level_triggered,
                                               fbl::RefPtr<Dispatcher>* interrupt_dispatcher,
                                               zx_rights_t* rights) {
     canary_.Assert();
@@ -163,11 +164,15 @@ zx_status_t PciDeviceDispatcher::MapInterrupt(int32_t which_irq,
         (static_cast<uint32_t>(which_irq) >= irqs_avail_cnt_))
         return ZX_ERR_INVALID_ARGS;
 
+    uint32_t flags = (level_triggered ? PciInterruptDispatcher::LEVEL_TRIGGERED : 0);
+    if (irqs_maskable_)
+        flags |= PciInterruptDispatcher::MASKABLE;
+
     // Attempt to create the dispatcher.  It will take care of things like checking for
     // duplicate registration.
     return PciInterruptDispatcher::Create(device_,
                                           which_irq,
-                                          irqs_maskable_,
+                                          flags,
                                           rights,
                                           interrupt_dispatcher);
 }

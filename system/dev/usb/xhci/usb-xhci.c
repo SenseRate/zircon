@@ -164,7 +164,7 @@ static void xhci_shutdown(xhci_t* xhci) {
 
     // stop our interrupt threads
     for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
-        zx_interrupt_signal(xhci->irq_handles[i]);
+        zx_interrupt_signal(xhci->irq_handles[i], ZX_INTERRUPT_CANCEL, 0);
         thrd_join(xhci->completer_threads[i], NULL);
         zx_handle_close(xhci->irq_handles[i]);
     }
@@ -224,15 +224,13 @@ static int completer_thread(void *arg) {
 
     while (1) {
         zx_status_t wait_res;
-        wait_res = zx_interrupt_wait(irq_handle);
+        wait_res = zx_interrupt_wait(irq_handle, NULL);
         if (wait_res != ZX_OK) {
             if (wait_res != ZX_ERR_CANCELED) {
-                zxlogf(ERROR, "unexpected pci_wait_interrupt failure (%d)\n", wait_res);
+                zxlogf(ERROR, "unexpected zx_interrupt_wait failure (%d)\n", wait_res);
             }
-            zx_interrupt_complete(irq_handle);
             break;
         }
-        zx_interrupt_complete(irq_handle);
         xhci_handle_interrupt(completer->xhci, completer->interrupter);
     }
     zxlogf(TRACE, "xhci completer %u thread done\n", completer->interrupter);

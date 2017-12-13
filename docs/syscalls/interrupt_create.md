@@ -61,6 +61,5 @@ of failure, a negative error value is returned.
 ## SEE ALSO
 
 [interrupt_wait](interrupt_wait.md),
-[interrupt_complete](interrupt_complete.md),
 [interrupt_signal](interrupt_signal.md),
 [handle_close](handle_close.md).

@@ -308,7 +308,7 @@ static int sdhci_irq_thread(void *arg) {
     zx_handle_t irq_handle = dev->irq_handle;
 
     while (true) {
-        wait_res = zx_interrupt_wait(irq_handle);
+        wait_res = zx_interrupt_wait(irq_handle, NULL);
         if (wait_res != ZX_OK) {
             printf("sdhci: interrupt wait failed with retcode = %d\n", wait_res);
             break;
@@ -344,9 +344,6 @@ static int sdhci_irq_thread(void *arg) {
             sdhci_error_recovery_locked(dev);
         }
         mtx_unlock(&dev->mtx);
-
-        // Mark this interrupt as completed.
-        zx_interrupt_complete(irq_handle);
     }
     return 0;
 }

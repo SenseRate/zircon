@@ -12,6 +12,7 @@
 #include <zircon/rights.h>
 #include <fbl/alloc_checker.h>
 #include <object/pci_device_dispatcher.h>
+#include <platform.h>
 
 PciInterruptDispatcher::~PciInterruptDispatcher() {
     if (device_) {
@@ -30,24 +31,26 @@ pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(const PcieDevice& dev
                                                            void* ctx) {
     DEBUG_ASSERT(ctx);
     PciInterruptDispatcher* thiz = (PciInterruptDispatcher*)ctx;
+    thiz->timestamp_ = current_time();
 
     // Mask the IRQ at the PCIe hardware level if we can, and (if any threads
     // just became runable) tell the kernel to trigger a reschedule event.
-    if (thiz->signal() > 0) {
-        return PCIE_IRQRET_MASK_AND_RESCHED;
+    bool mask = (thiz->flags_ == (LEVEL_TRIGGERED & MASKABLE));
+    if (thiz->signal(1 /*FIXME*/) > 0) {
+        return (mask ? PCIE_IRQRET_MASK_AND_RESCHED : PCIE_IRQRET_RESCHED);
     } else {
-        return PCIE_IRQRET_MASK;
+        return (mask ? PCIE_IRQRET_MASK : PCIE_IRQRET_NO_ACTION);
     }
 }
 
 zx_status_t PciInterruptDispatcher::Create(
         const fbl::RefPtr<PcieDevice>& device,
         uint32_t irq_id,
-        bool maskable,
+        uint32_t flags,
         zx_rights_t* out_rights,
         fbl::RefPtr<Dispatcher>* out_interrupt) {
     // Sanity check our args
-    if (!device || !out_rights || !out_interrupt) {
+    if (!device || !out_rights || !out_interrupt || (flags & ~FLAGS_MASK)) {
         return ZX_ERR_INVALID_ARGS;
     }
     if (!is_valid_interrupt(irq_id, 0)) {
@@ -56,7 +59,7 @@ zx_status_t PciInterruptDispatcher::Create(
 
     fbl::AllocChecker ac;
     // Attempt to allocate a new dispatcher wrapper.
-    auto interrupt_dispatcher = new (&ac) PciInterruptDispatcher(irq_id, maskable);
+    auto interrupt_dispatcher = new (&ac) PciInterruptDispatcher(irq_id, flags);
     fbl::RefPtr<Dispatcher> dispatcher = fbl::AdoptRef<Dispatcher>(interrupt_dispatcher);
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
@@ -76,7 +79,7 @@ zx_status_t PciInterruptDispatcher::Create(
     // Everything seems to have gone well.  Make sure the interrupt is unmasked
     // (if it is maskable) then transfer our dispatcher refererence to the
     // caller.
-    if (maskable) {
+    if (flags & MASKABLE) {
         device->UnmaskIrq(irq_id);
     }
     *out_interrupt = fbl::move(dispatcher);
@@ -84,25 +87,61 @@ zx_status_t PciInterruptDispatcher::Create(
     return ZX_OK;
 }
 
-zx_status_t PciInterruptDispatcher::InterruptComplete() {
-    DEBUG_ASSERT(device_ != nullptr);
-    unsignal();
+zx_status_t PciInterruptDispatcher::Bind(uint32_t slot, uint32_t vector, uint32_t options) {
+    canary_.Assert();
 
-    if (maskable_)
+    // PCI interrupt handles are automatically bound on creation and unbound on handle close
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t PciInterruptDispatcher::Unbind(uint32_t slot) {
+    canary_.Assert();
+
+    // PCI interrupt handles are automatically bound on creation and unbound on handle close
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t PciInterruptDispatcher::WaitForInterrupt(uint64_t& out_slots) {
+    canary_.Assert();
+
+    return wait(out_slots);
+}
+
+zx_status_t PciInterruptDispatcher::WaitForInterruptWithTimeStamp(uint32_t& out_slot,
+                                                                  zx_time_t& out_timestamp) {
+    canary_.Assert();
+
+    if (flags_ == (LEVEL_TRIGGERED & MASKABLE))
         device_->UnmaskIrq(irq_id_);
 
+    uint64_t slots;
+    zx_status_t status = wait(slots);
+    if (status == ZX_OK) {
+        out_slot = IRQ_SLOT;
+        out_timestamp = timestamp_;
+    }
+    return status;
+}
+
+zx_status_t PciInterruptDispatcher::UserSignal(uint32_t slot, zx_time_t timestamp) {
+    canary_.Assert();
+
+    if (slot == ZX_INTERRUPT_CANCEL && (flags_ & MASKABLE))
+        device_->MaskIrq(irq_id_);
+
+    timestamp_ = timestamp;
+    signal(1 << slot, true);
     return ZX_OK;
 }
 
-zx_status_t PciInterruptDispatcher::UserSignal() {
-    DEBUG_ASSERT(device_ != nullptr);
+void PciInterruptDispatcher::PreWait() {
+    if (flags_ == (LEVEL_TRIGGERED & MASKABLE)) {
+        device_->UnmaskIrq(irq_id_);
+    }
+}
 
-    if (maskable_)
-        device_->MaskIrq(irq_id_);
-
-    signal(true, ZX_ERR_CANCELED);
-
-    return ZX_OK;
+void PciInterruptDispatcher::PostWait() {
+    // level triggered interrupt is masked by the IRQ handler so we have nothing to do here
 }
 
 #endif  // if WITH_DEV_PCIE

@@ -31,5 +31,4 @@ of failure, a negative error value is returned.
 
 [interrupt_create](interrupt_create.md),
 [interrupt_wait](interrupt_wait.md),
-[interrupt_complete](interrupt_complete.md),
 [handle_close](handle_close.md).

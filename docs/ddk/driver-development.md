@@ -209,9 +209,9 @@ driver requests a handle to the device interrupt from its parent device in a
 device protocol method. For example, the PCI protocol implements
 `map_interrupt()` for PCI children. A driver should spawn a thread to wait on
 the interrupt handle, which will be signaled when the system receives an
-interrupt. The interrupt is masked when the object is signaled. Call
-[zx_interrupt_complete()](../syscalls/interrupt_wait.md) to unmask the
-interrupt.
+interrupt. The kernel will automatically handle masking and unmasking the
+interrupt as appropriate, depending on whether the interrupt is edge triggered
+or level triggered.
 
 The interrupt thread should not perform any long-running tasks. For drivers
 that perform lengthy tasks, use a worker thread.

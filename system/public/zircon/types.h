@@ -263,7 +263,7 @@ typedef uint64_t zx_off_t;
 #define ZX_CPRNG_DRAW_MAX_LEN        256
 #define ZX_CPRNG_ADD_ENTROPY_MAX_LEN 256
 
-// interrupt flags
+// interrupt bind flags
 #define ZX_INTERRUPT_REMAP_IRQ       0x1
 #define ZX_INTERRUPT_MODE_DEFAULT    (0u << 1)
 #define ZX_INTERRUPT_MODE_EDGE_LOW   (1u << 1)
@@ -271,6 +271,14 @@ typedef uint64_t zx_off_t;
 #define ZX_INTERRUPT_MODE_LEVEL_LOW  (3u << 1)
 #define ZX_INTERRUPT_MODE_LEVEL_HIGH (4u << 1)
 #define ZX_INTERRUPT_MODE_MASK       0xe
+#define ZX_INTERRUPT_MODE_LEVEL_MASK (ZX_INTERRUPT_MODE_LEVEL_LOW | ZX_INTERRUPT_MODE_LEVEL_HIGH)
+
+// maximum number of vectors that can be bound to an interrupt handle
+// high bit is reserved for ZX_INTERRUPT_CANCEL
+#define ZX_INTERRUPT_MAX_WAIT_SLOTS  63u
+
+// index for cancelling an interrupt wait
+#define ZX_INTERRUPT_CANCEL         ZX_INTERRUPT_MAX_WAIT_SLOTS
 
 // Channel options and limits.
 #define ZX_CHANNEL_READ_MAY_DISCARD         1u

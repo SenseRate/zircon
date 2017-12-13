@@ -747,15 +747,13 @@ struct acpi_irq_thread_arg {
 static int acpi_irq_thread(void *arg) {
     struct acpi_irq_thread_arg *real_arg = (struct acpi_irq_thread_arg *)arg;
     while (1) {
-        zx_status_t status = zx_interrupt_wait(real_arg->irq_handle);
+        zx_status_t status = zx_interrupt_wait(real_arg->irq_handle, NULL);
         if (status != ZX_OK) {
             continue;
         }
 
         // TODO: Should we do something with the return value from the handler?
         real_arg->handler(real_arg->context);
-
-        zx_interrupt_complete(real_arg->irq_handle);
     }
     return 0;
 }
@@ -800,9 +798,15 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(
     }
 
     zx_handle_t handle;
-    zx_status_t status = zx_interrupt_create(root_resource_handle, InterruptLevel,
-                                             ZX_INTERRUPT_REMAP_IRQ, &handle);
+    zx_status_t status = zx_interrupt_create(root_resource_handle, 0, &handle);
     if (status != ZX_OK) {
+        free(arg);
+        return AE_ERROR;
+    }
+    status = zx_interrupt_bind(handle, 0, root_resource_handle, InterruptLevel,
+                               ZX_INTERRUPT_REMAP_IRQ);
+    if (status != ZX_OK) {
+        zx_handle_close(handle);
         free(arg);
         return AE_ERROR;
     }

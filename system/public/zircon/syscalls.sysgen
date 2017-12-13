@@ -524,19 +524,32 @@ syscall debug_send_command
 # DDK Syscalls: Interrupts
 
 syscall interrupt_create
-    (handle: zx_handle_t, vector: uint32_t, options: uint32_t)
+    (hrsrc: zx_handle_t, options: uint32_t)
     returns (zx_status_t, out_handle: zx_handle_t);
 
-syscall interrupt_complete
+syscall interrupt_bind
+    (handle: zx_handle_t, slot: uint32_t, hrsrc: zx_handle_t, vector: uint32_t, options: uint32_t)
+    returns (zx_status_t);
+
+syscall interrupt_unbind
+    (handle: zx_handle_t, slot: uint32_t)
+    returns (zx_status_t);
+
+# interrupt_complete is no longer necessary and is now a no-op
+syscall interrupt_complete deprecated
     (handle: zx_handle_t)
     returns (zx_status_t);
 
 syscall interrupt_wait blocking
     (handle: zx_handle_t)
-    returns (zx_status_t);
+    returns (zx_status_t, slots: uint64_t optional);
+
+syscall interrupt_wait_with_timestamp blocking
+    (handle: zx_handle_t)
+    returns (zx_status_t, slot: uint32_t optional, timestamp: zx_time_t optional);
 
 syscall interrupt_signal
-    (handle: zx_handle_t)
+    (handle: zx_handle_t, slot: uint32_t, timestamp: zx_time_t)
     returns (zx_status_t);
 
 # DDK Syscalls: MMIO and Ports

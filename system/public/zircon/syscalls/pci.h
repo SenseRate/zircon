@@ -72,6 +72,8 @@ typedef struct zx_pcie_device_info {
 
 #define ZX_PCI_NO_IRQ_MAPPING UINT32_MAX
 
+#define ZX_MAX_PCI_IRQS (64u)
+
 // Dimensions: device id, function id, legacy pin number
 // ZX_PCI_NO_IRQ_MAPPING if no mapping specified.
 typedef uint32_t zx_pci_irq_swizzle_lut_t[ZX_PCI_MAX_DEVICES_PER_BUS]
@@ -86,7 +88,7 @@ typedef struct zx_pci_init_arg {
         uint32_t global_irq;
         bool level_triggered;
         bool active_high;
-    } irqs[64];
+    } irqs[ZX_MAX_PCI_IRQS];
 
     uint32_t addr_window_count;
     struct {

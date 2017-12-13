@@ -18,6 +18,10 @@ zx_status_t zx_interrupt_wait(zx_handle_t handle);
 wait until either an interrupt occurs for the interrupt vector associated
 with *handle* or another thread calls **zx_interrupt_signal()** on *handle*.
 
+For level triggered interrupts, **interrupt_wait()** will mask the interrupt
+before returning and unmask the interrupt when it is called again the next time.
+For edge triggered interrupts, the interrupt remains unmasked.
+
 ## RETURN VALUE
 
 **interrupt_wait**() returns **ZX_OK** when an interrupt has been received,
@@ -33,6 +37,5 @@ thread on *handle*.
 ## SEE ALSO
 
 [interrupt_create](interrupt_create.md),
-[interrupt_complete](interrupt_complete.md),
 [interrupt_signal](interrupt_signal.md),
 [handle_close](handle_close.md).

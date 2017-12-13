@@ -850,13 +850,11 @@ static int dwc_irq_thread(void* arg) {
     while (1) {
         zx_status_t wait_res;
 
-        wait_res = zx_interrupt_wait(dwc->irq_handle);
+        wait_res = zx_interrupt_wait(dwc->irq_handle, NULL);
         if (wait_res != ZX_OK)
             zxlogf(ERROR, "dwc_usb: irq wait failed, retcode = %d\n", wait_res);
 
         dwc_handle_irq(dwc);
-
-        zx_interrupt_complete(dwc->irq_handle);
     }
 
     zxlogf(INFO, "dwc_usb: irq thread finished\n");
