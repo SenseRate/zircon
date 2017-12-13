@@ -48,6 +48,9 @@ private:
 
     fbl::Canary<fbl::magic("INED")> canary_;
 
+    // next slot for WaitForInterruptWithTimeStamp round-robin
+    uint32_t next_wait_timestamp_slot_ = 0;
+
     // interrupts bound to this dispatcher
     fbl::Vector<Interrupt> interrupts_ TA_GUARDED(lock_);
     fbl::Mutex lock_;

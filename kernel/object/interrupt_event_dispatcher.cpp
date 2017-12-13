@@ -149,10 +149,43 @@ zx_status_t InterruptEventDispatcher::WaitForInterrupt(uint64_t& out_slots) {
 }
 
 zx_status_t InterruptEventDispatcher::WaitForInterruptWithTimeStamp(uint32_t& out_slot,
-                                                                  zx_time_t& out_timestamp) {
+                                                                    zx_time_t& out_timestamp) {
     canary_.Assert();
 
-    return ZX_OK;
+    uint64_t slots;
+    zx_status_t status = wait(slots);
+    if (status != ZX_OK)
+        return status;
+
+    DEBUG_ASSERT(slots);
+
+    uint32_t slot = next_wait_timestamp_slot_;
+    while (true) {
+        uint64_t mask = (1 << slot);
+        uint32_t next = slot + 1;
+         if (next == ZX_INTERRUPT_MAX_WAIT_SLOTS)
+            next = 0;
+
+        if (slots & mask) {
+            out_slot = slot;
+            for (const auto& interrupt : interrupts_) {
+                if (interrupt.slot == slot) {
+                    out_timestamp = interrupt.timestamp;
+                    break;
+                }
+            }
+
+            // reset any remaining slots
+            slots &= ~mask;
+            if (slots)
+                signal(slots);
+
+            next_wait_timestamp_slot_ = next;
+            return ZX_OK;
+        } else {
+            slot = next;
+        }
+    }
 }
 
 zx_status_t InterruptEventDispatcher::UserSignal(uint32_t slot, zx_time_t timestamp) {
